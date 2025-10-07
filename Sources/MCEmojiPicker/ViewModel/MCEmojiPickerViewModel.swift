@@ -109,10 +109,19 @@ final class MCEmojiPickerViewModel: MCEmojiPickerViewModelProtocol {
     }
     
     public func updateEmojiSkinTone(_ skinToneRawValue: Int, in indexPath: IndexPath) -> MCEmoji {
+        // Get the emoji from the filtered categories (what the user sees)
+        let filteredEmoji = emojiCategories[indexPath.section].emojis[indexPath.row]
+
         let categoryType: MCEmojiCategoryType = emojiCategories[indexPath.section].type
         let allCategoriesIndex: Int = allEmojiCategories.firstIndex { $0.type == categoryType } ?? 0
-        allEmojiCategories[allCategoriesIndex].emojis[indexPath.row].set(skinToneRawValue: skinToneRawValue)
-        return allEmojiCategories[allCategoriesIndex].emojis[indexPath.row]
+
+        // Find the correct emoji index in the unfiltered array by matching emojiKeys
+        guard let correctRowIndex = allEmojiCategories[allCategoriesIndex].emojis.firstIndex(where: { $0.emojiKeys == filteredEmoji.emojiKeys }) else {
+            return filteredEmoji
+        }
+
+        allEmojiCategories[allCategoriesIndex].emojis[correctRowIndex].set(skinToneRawValue: skinToneRawValue)
+        return allEmojiCategories[allCategoriesIndex].emojis[correctRowIndex]
     }
     
     public func updateSearchText(_ text: String) {
