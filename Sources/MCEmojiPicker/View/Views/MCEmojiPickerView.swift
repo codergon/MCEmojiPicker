@@ -37,6 +37,8 @@ protocol MCEmojiPickerViewDelegate: AnyObject {
   func getEmojiPickerFrame() -> CGRect
   func updateEmojiSkinTone(_ skinToneRawValue: Int, in indexPath: IndexPath)
   func feedbackImpactOccurred()
+  func didSearchTextChange(_ searchText: String)
+  func clearSearch()
 }
 
 final class MCEmojiPickerView: UIView {
@@ -50,6 +52,8 @@ final class MCEmojiPickerView: UIView {
   private enum Constants {
     static let defaultSelectedEmojiCategoryTintColor = UIColor.systemBlue
 
+    static let searchBarTopPadding = 8.0
+    static let searchBarHeight = 44.0
     static let verticalScrollIndicatorTopInset = 8.0
     static let collectionViewContentInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
 
@@ -68,6 +72,15 @@ final class MCEmojiPickerView: UIView {
   // MARK: - Private Properties
 
   private let emojiCategoryTypes: [MCEmojiCategoryType]
+
+  private let searchBar: UISearchBar = {
+    let searchBar = UISearchBar()
+    searchBar.translatesAutoresizingMaskIntoConstraints = false
+    searchBar.placeholder = "Search emojis..."
+    searchBar.searchBarStyle = .minimal
+    searchBar.backgroundColor = .clear
+    return searchBar
+  }()
 
   private let collectionView: UICollectionView = {
     let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
@@ -130,6 +143,7 @@ final class MCEmojiPickerView: UIView {
   override func draw(_ rect: CGRect) {
     super.draw(rect)
     setupCategoryViews()
+    setupSearchBarLayout()
     setupCollectionViewLayout()
     setupCollectionViewBottomInsets()
     setupCategoriesControlLayout()
@@ -146,6 +160,11 @@ final class MCEmojiPickerView: UIView {
     })
   }
 
+  /// Reloads the collection view data.
+  public func reloadData() {
+    collectionView.reloadData()
+  }
+
   // MARK: - Private Methods
 
   private func setupBackgroundColor() {
@@ -155,6 +174,18 @@ final class MCEmojiPickerView: UIView {
   private func setupDelegates() {
     collectionView.delegate = self
     collectionView.dataSource = self
+    searchBar.delegate = self
+  }
+
+  private func setupSearchBarLayout() {
+    addSubview(searchBar)
+    NSLayoutConstraint.activate([
+      searchBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+      searchBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+      searchBar.topAnchor.constraint(
+        equalTo: topAnchor, constant: safeAreaInsets.top + Constants.searchBarTopPadding),
+      searchBar.heightAnchor.constraint(equalToConstant: Constants.searchBarHeight),
+    ])
   }
 
   private func setupCollectionViewBottomInsets() {
@@ -167,7 +198,7 @@ final class MCEmojiPickerView: UIView {
     NSLayoutConstraint.activate([
       collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
       collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
-      collectionView.topAnchor.constraint(equalTo: topAnchor, constant: safeAreaInsets.top),
+      collectionView.topAnchor.constraint(equalTo: searchBar.bottomAnchor),
       collectionView.bottomAnchor.constraint(
         equalTo: bottomAnchor, constant: -safeAreaInsets.bottom),
     ])
@@ -433,5 +464,23 @@ extension MCEmojiPickerView: MCEmojiSkinTonePickerDelegate {
 
   func didEmojiSkinTonePickerDismissed() {
     toggleCollectionScrollAbility(isEnabled: true)
+  }
+}
+
+// MARK: - UISearchBarDelegate
+
+extension MCEmojiPickerView: UISearchBarDelegate {
+  func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+    delegate?.didSearchTextChange(searchText)
+  }
+
+  func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+    searchBar.resignFirstResponder()
+  }
+
+  func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+    searchBar.text = ""
+    searchBar.resignFirstResponder()
+    delegate?.clearSearch()
   }
 }
